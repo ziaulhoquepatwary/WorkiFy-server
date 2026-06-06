@@ -5,16 +5,11 @@ export const createJob = async (req, res) => {
     try {
         const body = req.body;
 
-        console.log(body);
-        console.log(req.user);
+        // console.log("---------------- BACKEND CHECK START ----------------");
+        // console.log("GET JOB Data:", req.body);
+        // console.log("GET Cookies:", req.cookies);
+        // console.log("----------------- BACKEND CHECK END -----------------");
 
-        const session = await auth.api.getSession({ headers: req.headers });
-
-        if (!session) {
-            return res.status(401).json({ success: false, message: "Unauthorized" });
-        }
-
-        const user = session.user;
 
         const parsed = jobValidationSchema.safeParse(body);
 
@@ -28,10 +23,10 @@ export const createJob = async (req, res) => {
 
         const newJob = await Job.create({
             ...parsed.data,
-            author_id: user.id,
-            author_name: user.name,
-            author_email: user.email,
-        })
+            author_id: req.user.id,
+            author_name: req.user.name,
+            author_email: req.user.email,
+        });
 
         res.status(201).json({
             success: true,
