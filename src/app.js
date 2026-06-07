@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import jobRouter from "./modules/job/job.routes.js";
 import { toNodeHandler } from "better-auth/node";
+import globalErrorHandler from "./middleware/globalErrorHandler.js";
 
 const createApp = (auth) => {
     const app = express();
@@ -25,6 +26,8 @@ const createApp = (auth) => {
     app.get("/", (req, res) => {
         res.send("Workify server is running successfully");
     });
+
+    app.use(globalErrorHandler);
 
     return app;
 };
