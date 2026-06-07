@@ -1,3 +1,4 @@
+import AppError from "../../utils/AppError.js";
 import Job from "./job.model.js";
 import { jobValidationSchema } from "./job.validation.js";
 
@@ -14,11 +15,7 @@ export const createJob = async (req, res) => {
         const parsed = jobValidationSchema.safeParse(body);
 
         if (!parsed.success) {
-            return res.status(400).json({
-                success: false,
-                message: "Validation failed",
-                errors: parsed.error.flatten().fieldErrors,
-            });
+            throw new AppError(400, "Validation failed")
         }
 
         const newJob = await Job.create({
