@@ -71,3 +71,15 @@ export const getAllJobs = catchAsync(async (req, res) => {
         jobs,
     });
 });
+
+export const getRecruiterJobs = catchAsync(async (req, res) => {
+    const recruiterId = req.user.id;
+
+    const jobs = Job.find({ author_id: recruiterId }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+        success: true,
+        count: jobs.length,
+        jobs
+    })
+})
