@@ -30,3 +30,44 @@ export const createJob = catchAsync(async (req, res) => {
         job: newJob
     })
 })
+
+export const getAllJobs = catchAsync(async (req, res) => {
+    const { search, category, jobType, maxSalary, page = 1, limit = 12 } = req.query;
+
+    let queryCondition = { status: "active" };
+
+    if (search) {
+        queryCondition.job_title = { $regex: search, $options: "i" };
+    }
+
+    if (category && category !== "All Categories") {
+        queryCondition.job_category = category;
+    }
+
+    if (jobType) {
+        const typesArray = jobType.split(",");
+        queryCondition.job_type = { $in: typesArray };
+    }
+
+    if (maxSalary) {
+        queryCondition.salary_min = { $lte: Number(maxSalary) };
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const jobs = await Job.find(queryCondition)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    const totalJobs = await Job.countDocuments(queryCondition);
+
+    res.status(200).json({
+        success: true,
+        count: jobs.length,
+        totalJobs,
+        totalPages: Math.ceil(totalJobs / limit),
+        currentPage: Number(page),
+        jobs,
+    });
+});
