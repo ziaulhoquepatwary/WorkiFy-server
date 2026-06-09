@@ -34,33 +34,48 @@ export const createJob = catchAsync(async (req, res) => {
 export const getAllJobs = catchAsync(async (req, res) => {
     const { search, category, jobType, maxSalary, page = 1, limit = 12 } = req.query;
 
-    let queryCondition = { status: "active" };
+    let matchStage = { status: "active" };
 
     if (search) {
-        queryCondition.job_title = { $regex: search, $options: "i" };
+        matchStage.job_title = { $regex: search, $options: "i" };
     }
 
     if (category && category !== "All Categories") {
-        queryCondition.job_category = category;
+        matchStage.job_category = category;
     }
 
     if (jobType) {
-        const typesArray = jobType.split(",");
-        queryCondition.job_type = { $in: typesArray };
+        matchStage.job_type = { $in: jobType.split(",") };
     }
 
     if (maxSalary) {
-        queryCondition.salary_min = { $lte: Number(maxSalary) };
+        matchStage.salary_min = { $lte: Number(maxSalary) };
     }
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const jobs = await Job.find(queryCondition)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit));
+    const jobs = await Job.aggregate([
+        { $match: matchStage },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: Number(limit) },
+        {
+            $project: {
+                job_title: 1,
+                job_category: 1,
+                job_type: 1,
+                work_mode: 1,
+                location: 1,
+                salary_min: 1,
+                salary_max: 1,
+                author_name: 1,
+                createdAt: 1,
+                applicants_count: 1
+            }
+        }
+    ]);
 
-    const totalJobs = await Job.countDocuments(queryCondition);
+    const totalJobs = await Job.countDocuments(matchStage);
 
     res.status(200).json({
         success: true,
@@ -81,5 +96,21 @@ export const getRecruiterJobs = catchAsync(async (req, res) => {
         success: true,
         count: jobs.length,
         jobs
+    })
+})
+
+export const getJobDetails = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    const job = await Job.findById(id);
+
+    if (!job) {
+        throw new AppError(404, "Job not found or has been removed")
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Job details fetched successfully",
+        job
     })
 })
