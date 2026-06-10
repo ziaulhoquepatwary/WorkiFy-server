@@ -19,6 +19,9 @@ export const protectRoute = async (req, res, next) => {
             });
         }
 
+        // console.log(session);
+
+
         req.user = {
             id: session.user.id,
             name: session.user.name,
