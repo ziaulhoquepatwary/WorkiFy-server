@@ -22,7 +22,12 @@ export const protectRoute = async (req, res, next) => {
         req.user = {
             id: session.user.id,
             name: session.user.name,
-            email: session.user.email
+            email: session.user.email,
+            role: session.user.role,
+            approvalStatus: session.user.approvalStatus,
+            plan: session.user.plan,
+            usageCount: session.user.usageCount,
+            lastActionDate: session.user.lastActionDate
         };
 
         next();

@@ -6,6 +6,8 @@ import { jobValidationSchema } from "./job.validation.js";
 export const createJob = catchAsync(async (req, res) => {
     const body = req.body;
 
+    console.log("Logged In User Info:", req.user);
+
     // console.log("---------------- BACKEND CHECK START ----------------");
     // console.log("GET JOB Data:", req.body);
     // console.log("GET Cookies:", req.cookies);
@@ -34,7 +36,10 @@ export const createJob = catchAsync(async (req, res) => {
 export const getAllJobs = catchAsync(async (req, res) => {
     const { search, category, jobType, maxSalary, page = 1, limit = 12 } = req.query;
 
-    let matchStage = { status: "active" };
+    let matchStage = {
+        status: "active",
+        application_deadline: { $gte: new Date() }
+    };
 
     if (search) {
         matchStage.job_title = { $regex: search, $options: "i" };
@@ -59,6 +64,22 @@ export const getAllJobs = catchAsync(async (req, res) => {
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: Number(limit) },
+
+        // add new fild: image for show company/recruter logo
+        {
+            $addFields: {
+                author_objectId: { $toObjectId: "$author_id" }
+            }
+        },
+        {
+            $lookup: {
+                from: "user",
+                localField: "author_objectId",
+                foreignField: "_id",
+                as: "recruiter_info"
+            }
+        },
+
         {
             $project: {
                 job_title: 1,
@@ -70,7 +91,9 @@ export const getAllJobs = catchAsync(async (req, res) => {
                 salary_max: 1,
                 author_name: 1,
                 createdAt: 1,
-                applicants_count: 1
+                application_deadline: 1,
+                applicants_count: 1,
+                author_image: { $arrayElemAt: ["$recruiter_info.image", 0] }
             }
         }
     ]);
@@ -90,7 +113,7 @@ export const getAllJobs = catchAsync(async (req, res) => {
 export const getRecruiterJobs = catchAsync(async (req, res) => {
     const recruiterId = req.user.id;
 
-    const jobs = Job.find({ author_id: recruiterId }).sort({ createdAt: -1 });
+    const jobs = await Job.find({ author_id: recruiterId }).sort({ createdAt: -1 });
 
     res.status(200).json({
         success: true,
@@ -108,9 +131,12 @@ export const getJobDetails = catchAsync(async (req, res) => {
         throw new AppError(404, "Job not found or has been removed")
     }
 
+    const isExpired = new Date(job.application_deadline) < new Date();
+
     res.status(200).json({
         success: true,
         message: "Job details fetched successfully",
+        isExpired,
         job
     })
 })
