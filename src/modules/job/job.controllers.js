@@ -5,13 +5,45 @@ import { jobValidationSchema } from "./job.validation.js";
 
 export const createJob = catchAsync(async (req, res) => {
     const body = req.body;
+    let currentUser = req.user;
 
-    console.log("Logged In User Info:", req.user);
+    const db = req.app.get("auth").$db;
 
-    // console.log("---------------- BACKEND CHECK START ----------------");
-    // console.log("GET JOB Data:", req.body);
-    // console.log("GET Cookies:", req.cookies);
-    // console.log("----------------- BACKEND CHECK END -----------------");
+    if (currentUser.approvalStatus === "pending") {
+        throw new AppError(403, "Your profile is pending admin approval. You cannot post jobs yet.")
+    }
+
+    if (currentUser.approvalStatus === "rejected") {
+        throw new AppError(403, "Your profile approval request was rejected.")
+    }
+
+    const today = new Date();
+    const lastAction = new Date(currentUser.lastActionDate);
+
+    const isNewMonth = today.getMonth() !== lastAction.getMonth() || today.getFullYear() !== lastAction.getFullYear();
+
+    if (isNewMonth) {
+        await db.collection("user").updateOne(
+            { _id: currentUser.id },
+            {
+                $set: {
+                    usageCount: 0,
+                    lastActionDate: today
+                }
+            }
+        );
+
+        currentUser.usageCount = 0;
+        currentUser.lastActionDate = today;
+    }
+
+    const recruiterLimits = { free: 3, growth: 10, enterprise: 50 };
+    const userPlan = currentUser.plan || "free";
+    const maxAllowedJobs = recruiterLimits[userPlan];
+
+    if (currentUser.usageCount >= maxAllowedJobs) {
+        throw new AppError(403, `You have reached your monthly job post limit (${maxAllowedJobs}) for the ${userPlan} plan.`);
+    }
 
     const parsed = jobValidationSchema.safeParse(body);
 
@@ -21,14 +53,22 @@ export const createJob = catchAsync(async (req, res) => {
 
     const newJob = await Job.create({
         ...parsed.data,
-        author_id: req.user.id,
-        author_name: req.user.name,
-        author_email: req.user.email,
+        author_id: currentUser.id,
+        author_name: currentUser.name,
+        author_email: currentUser.email,
     });
+
+    await db.collection("user").updateOne(
+        { _id: currentUser.id },
+        {
+            $inc: { usageCount: 1 },
+            $set: { lastActionDate: today }
+        }
+    )
 
     res.status(201).json({
         success: true,
-        message: "Job Create Successfully",
+        message: `Job Created Successfully. (${currentUser.usageCount + 1}/${maxAllowedJobs} used this month)`,
         job: newJob
     })
 })
