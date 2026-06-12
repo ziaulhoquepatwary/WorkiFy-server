@@ -2,12 +2,11 @@ import AppError from "../../utils/AppError.js";
 import catchAsync from "../../utils/catchAsync.js";
 import Job from "./job.model.js";
 import { jobValidationSchema } from "./job.validation.js";
+import mongoose from "mongoose";
 
 export const createJob = catchAsync(async (req, res) => {
     const body = req.body;
     let currentUser = req.user;
-
-    const db = req.app.get("auth").$db;
 
     if (currentUser.approvalStatus === "pending") {
         throw new AppError(403, "Your profile is pending admin approval. You cannot post jobs yet.")
@@ -23,8 +22,8 @@ export const createJob = catchAsync(async (req, res) => {
     const isNewMonth = today.getMonth() !== lastAction.getMonth() || today.getFullYear() !== lastAction.getFullYear();
 
     if (isNewMonth) {
-        await db.collection("user").updateOne(
-            { _id: currentUser.id },
+        await mongoose.connection.collection("user").updateOne(
+            { _id: new mongoose.Types.ObjectId(currentUser.id) },
             {
                 $set: {
                     usageCount: 0,
@@ -34,10 +33,9 @@ export const createJob = catchAsync(async (req, res) => {
         );
 
         currentUser.usageCount = 0;
-        currentUser.lastActionDate = today;
     }
 
-    const recruiterLimits = { free: 3, growth: 10, enterprise: 50 };
+    const recruiterLimits = { free: 3, growth: 30, enterprise: 100 };
     const userPlan = currentUser.plan || "free";
     const maxAllowedJobs = recruiterLimits[userPlan];
 
@@ -58,13 +56,15 @@ export const createJob = catchAsync(async (req, res) => {
         author_email: currentUser.email,
     });
 
-    await db.collection("user").updateOne(
-        { _id: currentUser.id },
+    const updateResult = await mongoose.connection.collection("user").updateOne(
+        { _id: new mongoose.Types.ObjectId(currentUser.id) },
         {
             $inc: { usageCount: 1 },
             $set: { lastActionDate: today }
         }
-    )
+    );
+
+    console.log("Database Update Result:", updateResult);
 
     res.status(201).json({
         success: true,
