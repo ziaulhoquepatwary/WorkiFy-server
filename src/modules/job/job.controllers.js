@@ -35,7 +35,7 @@ export const createJob = catchAsync(async (req, res) => {
         currentUser.usageCount = 0;
     }
 
-    const recruiterLimits = { free: 3, growth: 30, enterprise: 100 };
+    const recruiterLimits = { free: 3, pro: 30, premium: 100 };
     const userPlan = currentUser.plan || "free";
     const maxAllowedJobs = recruiterLimits[userPlan];
 
