@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get("/", getAllJobs);
 router.get("/my-created-job", protectRoute, getRecruiterJobs);
-router.get("/:id", protectRoute, getJobDetails)
+router.get("/:id", getJobDetails)
 router.post("/", protectRoute, createJob);
 
 export default router;

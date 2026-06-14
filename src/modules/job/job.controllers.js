@@ -64,7 +64,7 @@ export const createJob = catchAsync(async (req, res) => {
         }
     );
 
-    console.log("Database Update Result:", updateResult);
+    // console.log("Database Update Result:", updateResult);
 
     res.status(201).json({
         success: true,
@@ -171,12 +171,21 @@ export const getJobDetails = catchAsync(async (req, res) => {
         throw new AppError(404, "Job not found or has been removed")
     }
 
+    const recruiter = await mongoose.connection.collection("user").findOne(
+        { _id: new mongoose.Types.ObjectId(job.author_id) }
+    );
+
     const isExpired = new Date(job.application_deadline) < new Date();
+
+    const jobDetails = {
+        ...job.toObject(),
+        author_image: recruiter?.image || null
+    }
 
     res.status(200).json({
         success: true,
         message: "Job details fetched successfully",
         isExpired,
-        job
+        job: jobDetails
     })
 })

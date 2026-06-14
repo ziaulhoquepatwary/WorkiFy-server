@@ -7,7 +7,7 @@ export const getPendingRecruiters = catchAsync(async (req, res) => {
         .find({
             role: "recruiter",
             approvalStatus: "pending",
-            emailVerified: true,
+            // emailVerified: true,
             phoneNumber: { $ne: "" }
         })
         .toArray();
