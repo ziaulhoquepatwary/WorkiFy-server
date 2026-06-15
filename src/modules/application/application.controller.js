@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import AppError from "../../utils/AppError.js";
 import catchAsync from "../../utils/catchAsync.js";
+import { applyJobSchema } from "./applicationValidator.js";
+import Application from "./application.model.js";
+import Job from "../job/job.model.js";
 
 export const applyJob = catchAsync(async (req, res) => {
     const body = req.body;
