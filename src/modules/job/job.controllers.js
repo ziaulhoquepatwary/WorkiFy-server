@@ -153,13 +153,54 @@ export const getAllJobs = catchAsync(async (req, res) => {
 export const getRecruiterJobs = catchAsync(async (req, res) => {
     const recruiterId = req.user.id;
 
-    const jobs = await Job.find({ author_id: recruiterId }).sort({ createdAt: -1 });
+    const myJobs = await Job.aggregate([
+        {
+            $match: {
+                author_id: recruiterId
+            }
+        },
+        {
+            $addFields: {
+                jobIdString: { $toString: "$_id" }
+            }
+        },
+        {
+            $lookup: {
+                from: "applications",
+                localField: "jobIdString",
+                foreignField: "jobId",
+                as: "applications"
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                job_title: 1,
+                job_category: 1,
+                job_type: 1,
+                work_mode: 1,
+                vacancy: 1,
+                salary_min: 1,
+                salary_max: 1,
+                location: 1,
+                experience_level: 1,
+                application_deadline: 1,
+                status: 1,
+                createdAt: 1,
+                total_applications: { $size: "$applications" }
+            }
+        },
+        {
+            $sort: { createdAt: -1 }
+        }
+    ]);
 
     res.status(200).json({
         success: true,
-        count: jobs.length,
-        jobs
-    })
+        results: myJobs.length,
+        message: "Recruiter jobs retrieved successfully.",
+        jobs: myJobs
+    });
 })
 
 export const getJobDetails = catchAsync(async (req, res) => {
