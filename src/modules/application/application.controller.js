@@ -149,3 +149,55 @@ export const getMyApplications = catchAsync(async (req, res) => {
         applications: myApplications
     });
 });
+
+export const getJobApplicants = catchAsync(async (req, res) => {
+    const { jobId } = req.params;
+    const recruiterId = req.user.id;
+
+    const applicants = await Application.aggregate([
+        {
+            $match: { 
+                jobId: jobId,
+                recruiterId: recruiterId 
+            }
+        },
+        {
+            $addFields: {
+                seekerObjectId: { $toObjectId: "$seekerId" }
+            }
+        },
+        {
+            $lookup: {
+                from: "user",
+                localField: "seekerObjectId",
+                foreignField: "_id",
+                as: "seekerDetails"
+            }
+        },
+        {
+            $unwind: { path: "$seekerDetails", preserveNullAndEmptyArrays: true }
+        },
+        {
+            $project: {
+                _id: 1,
+                jobId: 1,
+                status: 1,
+                resumeUrl: 1,
+                coverLetter: 1,
+                linkedinUrl: 1,
+                portfolioUrl: 1,
+                createdAt: 1,
+                "seekerDetails.name": 1,
+                "seekerDetails.email": 1,
+                "seekerDetails.image": 1
+            }
+        },
+        { $sort: { createdAt: -1 } }
+    ]);
+
+    res.status(200).json({
+        success: true,
+        results: applicants.length,
+        applicants
+    });
+});
