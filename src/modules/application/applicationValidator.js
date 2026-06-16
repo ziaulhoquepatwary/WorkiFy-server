@@ -5,6 +5,6 @@ export const applyJobSchema = z.object({
     resumeUrl: z.string().url("Please provide a valid URL for your resume"),
     coverLetter: z.string().url("Invalid CoverLetter URL").optional(),
     linkedinUrl: z.string().url("Invalid LinkedIn URL").optional(),
-    portfolioUrl: z.string().url("Invalid Portfolio URL"),
+    portfolioUrl: z.string().url("Invalid Portfolio URL").optional(),
     otherLink: z.string().url("Invalid Link").optional(),
 })

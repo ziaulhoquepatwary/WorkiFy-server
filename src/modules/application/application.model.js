@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const ApplicationSchema = new mongoose.Schema(
     {
-        jobId: { type: String, required: true },
-        seekerId: { type: String, required: true },
-        recruiterId: { type: String, required: true },
+        jobId: { type: String, required: true, index: true },
+        seekerId: { type: String, required: true, index: true },
+        recruiterId: { type: String, required: true, index: true },
         resumeUrl: { type: String, required: true },
         coverLetter: { type: String, default: "" },
         linkedinUrl: { type: String, default: "" },

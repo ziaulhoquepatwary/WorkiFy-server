@@ -18,13 +18,13 @@ export const applyJob = catchAsync(async (req, res) => {
     }
 
     const today = new Date();
-    const lastAction = new Date(currentUser.last);
+    const lastAction = new Date(currentUser.lastActionDate);
 
     const isNewMonth = today.getMonth() !== lastAction.getMonth() || today.getFullYear() !== lastAction.getFullYear();
 
     if (isNewMonth) {
         await mongoose.connection.collection("user").updateOne(
-            { _id: currentUser.id },
+            { _id: new mongoose.Types.ObjectId(currentUser.id) },
             {
                 $set: {
                     usageCount: 0,
@@ -72,17 +72,80 @@ export const applyJob = catchAsync(async (req, res) => {
         status: "pending"
     });
 
-    await mongoose.connection.collection("user").updateOne(
-        { _id: currentUser.id },
+    const updateResult = await mongoose.connection.collection("user").updateOne(
+        { _id: new mongoose.Types.ObjectId(currentUser.id) },
         {
             $inc: { usageCount: 1 },
             $set: { lastActionDate: today }
         }
     );
 
+    // console.log("Database Update Result:", updateResult);
+
     res.status(201).json({
         success: true,
         message: `Applied for the job successfully. (${currentUser.usageCount + 1}/${maxAllowedApplies} used this month)`,
         application: newApplication
     });
-})
+});
+
+export const getMyApplications = catchAsync(async (req, res) => {
+    const seekerId = req.user.id;
+
+    const myApplications = await Application.aggregate([
+        {
+            $match: {
+                seekerId: seekerId
+            }
+        },
+
+        {
+            $addFields: {
+                jobObjectId: { $toObjectId: "$jobId" }
+            }
+        },
+
+        {
+            $lookup: {
+                from: "jobs",
+                localField: "jobObjectId",
+                foreignField: "_id",
+                as: "jobDetails"
+            }
+        },
+
+        {
+            $unwind: {
+                path: "$jobDetails",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        {
+            $project: {
+                _id: 1,
+                seekerId: 1,
+                recruiterId: 1,
+                status: 1,
+                resumeUrl: 1,
+                createdAt: 1,
+                "jobDetails.job_title": 1,
+                "jobDetails.job_category": 1,
+                "jobDetails.job_type": 1,
+                "jobDetails.work_mode": 1,
+                "jobDetails.location": 1
+            }
+        },
+
+        {
+            $sort: { createdAt: -1 }
+        }
+    ]);
+
+    res.status(200).json({
+        success: true,
+        results: myApplications.length,
+        message: "Your job applications retrieved successfully.",
+        applications: myApplications
+    });
+});
