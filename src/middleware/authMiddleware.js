@@ -1,6 +1,6 @@
 import { fromNodeHeaders } from "better-auth/node";
 
-export const protectRoute = async (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
     try {
         const auth = req.app.get("auth");
 
@@ -12,14 +12,14 @@ export const protectRoute = async (req, res, next) => {
             headers: fromNodeHeaders(req.headers),
         });
 
+        console.log(session);
+
         if (!session || !session.user) {
             return res.status(401).json({
                 success: false,
                 message: "Unauthorized! Please login first."
             });
         }
-
-        // console.log(session);
 
 
         req.user = {
