@@ -163,6 +163,50 @@ export const getMyApplications = catchAsync(async (req, res) => {
     });
 });
 
+export const getSingleApplication = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    const application = await Application.findById(id);
+
+    if (!application) {
+        throw new AppError(404, "Application not found.");
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Application details fetched successfully.",
+        application
+    });
+});
+
+export const deleteApplication = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const seekerId = req.user.id;
+
+    const application = await Application.findById(id);
+
+    if (!application) {
+        return res.status(404).json({
+            success: false,
+            message: "Application not found."
+        });
+    }
+
+    if (application.seekerId.toString() !== seekerId) {
+        return res.status(403).json({
+            success: false,
+            message: "You are not authorized to delete this application."
+        });
+    }
+
+    await Application.findByIdAndDelete(id);
+
+    res.status(200).json({
+        success: true,
+        message: "Application deleted successfully."
+    });
+});
+
 export const getJobApplicants = catchAsync(async (req, res) => {
     const { jobId } = req.params;
     const recruiterId = req.user.id;

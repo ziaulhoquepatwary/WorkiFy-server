@@ -24,7 +24,7 @@ const createApp = (auth) => {
     app.all("/api/auth/*splat", toNodeHandler(auth));
 
     app.use("/api/jobs", jobRouter);
-    app.use("/api/jobs/apply", jobApplyRouter)
+    app.use("/api/application", jobApplyRouter)
     app.use("/api/admin", adminRouter)
 
     app.get("/", (req, res) => {
