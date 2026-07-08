@@ -92,19 +92,21 @@ export const applyJob = catchAsync(async (req, res) => {
 export const getMyApplications = catchAsync(async (req, res) => {
     const seekerId = req.user.id;
 
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
     const myApplications = await Application.aggregate([
         {
             $match: {
                 seekerId: seekerId
             }
         },
-
         {
             $addFields: {
                 jobObjectId: { $toObjectId: "$jobId" }
             }
         },
-
         {
             $lookup: {
                 from: "jobs",
@@ -113,21 +115,18 @@ export const getMyApplications = catchAsync(async (req, res) => {
                 as: "jobDetails"
             }
         },
-
         {
             $unwind: {
                 path: "$jobDetails",
                 preserveNullAndEmptyArrays: true
             }
         },
-
         {
             $project: {
                 _id: 1,
+                jobId: 1,
                 seekerId: 1,
-                recruiterId: 1,
                 status: 1,
-                resumeUrl: 1,
                 createdAt: 1,
                 "jobDetails.job_title": 1,
                 "jobDetails.job_category": 1,
@@ -136,17 +135,31 @@ export const getMyApplications = catchAsync(async (req, res) => {
                 "jobDetails.location": 1
             }
         },
-
         {
             $sort: { createdAt: -1 }
+        },
+        {
+            $facet: {
+                metadata: [{ $count: "total" }],
+                data: [{ $skip: skip }, { $limit: limit }]
+            }
         }
     ]);
 
+    const applications = myApplications[0].data;
+    const total = myApplications[0].metadata[0] ? myApplications[0].metadata[0].total : 0;
+    const totalPages = Math.ceil(total / limit);
+
     res.status(200).json({
         success: true,
-        results: myApplications.length,
         message: "Your job applications retrieved successfully.",
-        applications: myApplications
+        pagination: {
+            totalApplications: total,
+            totalPages,
+            currentPage: page,
+            limit
+        },
+        applications
     });
 });
 
@@ -156,9 +169,9 @@ export const getJobApplicants = catchAsync(async (req, res) => {
 
     const applicants = await Application.aggregate([
         {
-            $match: { 
+            $match: {
                 jobId: jobId,
-                recruiterId: recruiterId 
+                recruiterId: recruiterId
             }
         },
         {
