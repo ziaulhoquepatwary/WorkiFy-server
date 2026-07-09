@@ -211,7 +211,11 @@ export const getJobApplicants = catchAsync(async (req, res) => {
     const { jobId } = req.params;
     const recruiterId = req.user.id;
 
-    const applicants = await Application.aggregate([
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const applicantsData = await Application.aggregate([
         {
             $match: {
                 jobId: jobId,
@@ -249,12 +253,28 @@ export const getJobApplicants = catchAsync(async (req, res) => {
                 "seekerDetails.image": 1
             }
         },
-        { $sort: { createdAt: -1 } }
+        { $sort: { createdAt: -1 } },
+        {
+            $facet: {
+                metadata: [{ $count: "total" }],
+                data: [{ $skip: skip }, { $limit: limit }]
+            }
+        }
     ]);
+
+    const applicants = applicantsData[0].data;
+    const total = applicantsData[0].metadata[0] ? applicantsData[0].metadata[0].total : 0;
+    const totalPages = Math.ceil(total / limit);
 
     res.status(200).json({
         success: true,
-        results: applicants.length,
+        message: "Applicants retrieved successfully.",
+        pagination: {
+            totalApplicants: total,
+            totalPages,
+            currentPage: page,
+            limit
+        },
         applicants
     });
 });
