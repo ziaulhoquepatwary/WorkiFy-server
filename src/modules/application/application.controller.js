@@ -278,3 +278,42 @@ export const getJobApplicants = catchAsync(async (req, res) => {
         applicants
     });
 });
+
+export const updateApplicationStatus = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    const recruiterId = req.user.id;
+
+    const validStatuses = ["pending", "interview", "selected", "rejected"];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+            success: false,
+            message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`
+        });
+    }
+
+    const application = await Application.findById(id);
+
+    if (!application) {
+        return res.status(404).json({
+            success: false,
+            message: "Application not found."
+        });
+    }
+
+    if (application.recruiterId.toString() !== recruiterId) {
+        return res.status(403).json({
+            success: false,
+            message: "You are not authorized to update this application status."
+        });
+    }
+
+    application.status = status;
+    await application.save();
+
+    res.status(200).json({
+        success: true,
+        message: `Application status updated to '${status}' successfully.`,
+        application
+    });
+});
