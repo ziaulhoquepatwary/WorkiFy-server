@@ -1,5 +1,6 @@
 import AppError from "../../utils/AppError.js";
 import catchAsync from "../../utils/catchAsync.js";
+import Application from "../application/application.model.js";
 import Job from "./job.model.js";
 import { jobValidationSchema } from "./job.validation.js";
 import mongoose from "mongoose";
@@ -234,12 +235,41 @@ export const getJobDetails = catchAsync(async (req, res) => {
 export const getMyJobs = catchAsync(async (req, res) => {
     const recruiterId = req.user.id;
 
-    const jobs = await Job.find({ author_id: recruiterId }).sort({ createdAt: -1 });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalJobs = await Job.countDocuments({ author_id: recruiterId });
+
+    const jobs = await Job.find({ author_id: recruiterId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    const jobsWithApplicantCount = await Promise.all(
+        jobs.map(async (job) => {
+            const count = await Application.countDocuments({ jobId: job._id });
+
+            return {
+                ...job,
+                applicants_count: count
+            };
+        })
+    );
+
+    const totalPages = Math.ceil(totalJobs / limit);
 
     res.status(200).json({
         success: true,
-        results: jobs.length,
-        message: "Recruiter jobs fetched successfully.",
-        jobs
+        results: jobsWithApplicantCount.length,
+        pagination: {
+            totalJobs,
+            totalPages,
+            currentPage: page,
+            limit
+        },
+        message: "Recruiter jobs with application counts fetched successfully.",
+        jobs: jobsWithApplicantCount
     });
 });
