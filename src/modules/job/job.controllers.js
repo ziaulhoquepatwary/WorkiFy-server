@@ -273,3 +273,24 @@ export const getMyJobs = catchAsync(async (req, res) => {
         jobs: jobsWithApplicantCount
     });
 });
+
+export const deleteJob = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    const job = await Job.findById(id);
+
+    if (!job) {
+        return res.status(404).json({
+            success: false,
+            message: "Job not found."
+        });
+    }
+
+    await Job.findByIdAndDelete(id);
+    await Application.deleteMany({ jobId: id });
+
+    res.status(200).json({
+        success: true,
+        message: "Job and associated applications deleted successfully."
+    });
+});
