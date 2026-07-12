@@ -274,6 +274,38 @@ export const getMyJobs = catchAsync(async (req, res) => {
     });
 });
 
+export const updateJob = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const recruiterId = req.user.id;
+
+    const job = await Job.findById(id);
+
+    if (!job) {
+        return res.status(404).json({
+            success: false,
+            message: "Job not found."
+        });
+    }
+
+    if (job.author_id.toString() !== recruiterId) {
+        return res.status(403).json({
+            success: false,
+            message: "You are not authorized to update this job."
+        });
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(id, req.body, {
+        new: true,
+        runValidators: true
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "Job updated successfully.",
+        job: updatedJob
+    });
+});
+
 export const deleteJob = catchAsync(async (req, res) => {
     const { id } = req.params;
 
