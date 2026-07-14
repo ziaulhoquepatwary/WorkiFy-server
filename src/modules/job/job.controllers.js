@@ -278,6 +278,9 @@ export const updateJob = catchAsync(async (req, res) => {
     const { id } = req.params;
     const recruiterId = req.user.id;
 
+    console.log(req.body);
+    
+
     const job = await Job.findById(id);
 
     if (!job) {
