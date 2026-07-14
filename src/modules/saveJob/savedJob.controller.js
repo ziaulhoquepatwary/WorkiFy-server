@@ -33,3 +33,21 @@ export const toggleSaveJob = catchAsync(async (req, res) => {
         message: "Job saved successfully.",
     });
 });
+
+export const getSavedJobs = catchAsync(async (req, res) => {
+    const userId = req.user.id;
+
+    const savedJobs = await SavedJob.find({ userId })
+        .populate("jobId")
+        .sort({ createdAt: -1 });
+
+    const jobs = savedJobs
+        .filter((item) => item.jobId !== null)
+        .map((item) => item.jobId);
+
+    res.status(200).json({
+        success: true,
+        count: jobs.length,
+        data: jobs,
+    });
+});
