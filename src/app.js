@@ -5,7 +5,8 @@ import jobRouter from "./modules/job/job.routes.js";
 import { toNodeHandler } from "better-auth/node";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import adminRouter from "./modules/admin/admin.routes.js";
-import jobApplyRouter from "./modules/application/application.routes.js"
+import jobApplyRouter from "./modules/application/application.routes.js";
+import saveJobs from "./modules/saveJob/savedJob.routes";
 
 const createApp = (auth) => {
     const app = express();
@@ -24,8 +25,9 @@ const createApp = (auth) => {
     app.all("/api/auth/*splat", toNodeHandler(auth));
 
     app.use("/api/jobs", jobRouter);
-    app.use("/api/application", jobApplyRouter)
-    app.use("/api/admin", adminRouter)
+    app.use("/api/application", jobApplyRouter);
+    app.use("/api/admin", adminRouter);
+    app.use("/api/saveJob", saveJobs);
 
     app.get("/", (req, res) => {
         res.send("Workify server is running successfully");
